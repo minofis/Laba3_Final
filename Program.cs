@@ -12,11 +12,11 @@ class Program
         Waiting = 0,
         Delivering = 1,
         Delivered = 2,
-    }
-
-
+    }   
     public interface IDeliveryManager{
-   
+        public void DeliveryProgress(int deliveryTime, Order order);
+        public int CalculateDeliveryTime(string clientAddress);
+        public Courier GetBestCourier(Courier[] couriers);
     }
 
     public class Person{
@@ -34,6 +34,10 @@ class Program
         Number = number;
         Transport = transport;
         }
+
+        public void GetInfo(){
+            Console.WriteLine($"\nCourier:\n\n\t{Name}\n\t{Number}\n\t{Rating}\n\t{Transport}");
+        }
     }
 
 
@@ -45,6 +49,10 @@ class Program
             Number = number;
             Address = address;
         }
+
+        public void GetInfo(){
+            Console.WriteLine($"\nClient:\n\n\t{Name}\n\t{Address}\n\t{Number}");
+        }
     }
 
 
@@ -54,7 +62,7 @@ class Program
         public Client Client { get; private set; }
         public Courier Courier { get; private set; }
         public List<Dish> Dishes { get; private set; }
-        public OrderStatus Status { get; private set; }
+        public OrderStatus Status { get; private set; } = OrderStatus.Waiting;
         public int TotalPrice { get; private set; }
 
         public Order(Restaurant restaurant, Client client, Courier courier, List<Dish> dishes, OrderStatus status, int totalPrice){
@@ -65,14 +73,14 @@ class Program
             Status = status;
         }
 
-        public string GetInfo(Restaurant restaurant, Client client, Courier courier, List<Dish> selectedDishes, OrderStatus orderStatus){
+        public string GetInfo(Restaurant restaurant, Client client, Courier courier, List<Dish> selectedDishes, Order order){
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"Info by order:");
             Console.ResetColor();
-            Console.WriteLine($"\nRestaurant:\n\n\t{restaurant.Name}\n\t{restaurant.Address}");
-            Console.WriteLine($"\nClient:\n\n\t{client.Name}\n\t{client.Address}\n\t{client.Number}");
-            Console.WriteLine($"\nCourier:\n\n\t{courier.Name}\n\t{courier.Number}\n\t{courier.Rating}\n\t{courier.Transport}");
-            Console.WriteLine($"\nOrder Status:\n\n\t{orderStatus}");
+            restaurant.GetInfo();
+            client.GetInfo();
+            courier.GetInfo();
+            order.GetStatus();
             Console.WriteLine("\nDishes:");
             foreach(Dish dish in selectedDishes){
                 Console.WriteLine($"\n\t{dish.Name}");
@@ -87,6 +95,10 @@ class Program
             Console.WriteLine("\nOK (any key) | CANCEL (0)");
             string confirm = Console.ReadLine();
             return confirm;
+        }
+
+        public void GetStatus(){
+            Console.WriteLine($"\nOrder Status:\n\n\t{Status}");
         }
 
         public void ChangeStatus(OrderStatus status){
@@ -129,6 +141,10 @@ class Program
                 Console.WriteLine($"\n Id: {Dish.Id} \n Dish: {Dish.Name} \n Description: {Dish.Description} \n Price: ${Dish.Price}");
             }
         }
+
+        public void GetInfo(){
+            Console.WriteLine($"\nRestaurant:\n\n\t{Id}\n\t{Name}\n\t{Address}\n\t{Rating}\n\t{Type}");
+        }
     }
 
     public class Dish{
@@ -165,25 +181,30 @@ class Program
             return deliveryTime;
         }
 
-        public void DeliveryProgress(int deliveryTime){
+        public void DeliveryProgress(int deliveryTime, Order order){
             for (int i = deliveryTime; i > 0; i--)
             {
                 Console.WriteLine($"{i} seconds left");
                 Thread.Sleep(1000);
             }
+
+            order.ChangeStatus(OrderStatus.Delivered);
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            order.GetStatus();
+            Console.ResetColor();
         }
     }
 
     public class MockTester{
         public static Restaurant GetMockRestaurantData(int RestaurantId){
             if(RestaurantId == 1){
-                return new Restaurant(1, "Osama", "Via Monte Carlo 44", "Sushiya", 5);
+                return new Restaurant(1, "Osama", "3689 Walton Street", "Sushiya", 5);
             }
             else if(RestaurantId == 2){
-                return new Restaurant(2, "Dominos", "Via Delo Rosa 24", "Pizzeria", 4);
+                return new Restaurant(2, "Dominos", "3104 Bastin Drive", "Pizzeria", 4);
             }
             else if(RestaurantId == 3){
-                return new Restaurant(3, "Aroma Kava", "Via Sala Mandra 51", "Cafe", 3);
+                return new Restaurant(3, "Aroma Kava", "1558 Washington Avenue", "Cafe", 3);
             }
             else
             {
@@ -261,7 +282,7 @@ class Program
             Console.ResetColor();
             foreach (var restaurant in restaurants)
             {
-            Console.WriteLine($"\n{restaurant.Id}) {restaurant.Name}");
+            restaurant.GetInfo();
             }
             restaurantId = Console.ReadLine();
 
@@ -377,7 +398,7 @@ class Program
 
         Order order = new(restaurant, client, courier, selectedDishes, OrderStatus.Waiting, 10);
 
-        string confirm = order.GetInfo(restaurant, client, courier, selectedDishes, OrderStatus.Waiting);
+        string confirm = order.GetInfo(restaurant, client, courier, selectedDishes, order);
 
         if(confirm == "0"){
             Console.ForegroundColor = ConsoleColor.Red;
@@ -395,11 +416,6 @@ class Program
 
         int deliveryTime = delivery.CalculateDeliveryTime(client.Address);
 
-        delivery.DeliveryProgress(deliveryTime);
-
-        order.ChangeStatus(OrderStatus.Delivered);
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine($"\nOrder Status:\n\n\t{order.Status}");
-        Console.ResetColor();
+        delivery.DeliveryProgress(deliveryTime, order);
     }
 }
