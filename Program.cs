@@ -93,7 +93,7 @@ class Program
             Console.WriteLine($"\nTotal Price:\n\n\t${totalPrice}");
 
             Console.WriteLine("\nOK (any key) | CANCEL (0)");
-            string confirm = Console.ReadLine();
+            string confirm = "1";
             return confirm;
         }
 
@@ -136,7 +136,7 @@ class Program
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.WriteLine($"\nSelect a dish from {Name}(1, 2, 3) or complete your order(0):");
             Console.ResetColor();
-            foreach (var Dish in Dishes)
+            foreach (Dish Dish in Dishes)
             {
                 Console.WriteLine($"\n Id: {Dish.Id} \n Dish: {Dish.Name} \n Description: {Dish.Description} \n Price: ${Dish.Price}");
             }
@@ -253,69 +253,49 @@ class Program
                 new("Leon", "+380545353543", 4, Transport.Bicycle),
             ];
         }
-    }
 
-    public static string ReadInfo(string input){
-        string info;
-        do
+        private static readonly Random random = new();
+
+        public static Restaurant GetRandomRestaurant()
+        {        
+            Restaurant sushiya = MockTester.GetMockRestaurantData(1);
+            sushiya.AddDishes(MockTester.GetMockDishesData(1));
+            Restaurant pizzeria = MockTester.GetMockRestaurantData(2);
+            pizzeria.AddDishes(MockTester.GetMockDishesData(2));
+            Restaurant cafe = MockTester.GetMockRestaurantData(3);
+            cafe.AddDishes(MockTester.GetMockDishesData(3));
+
+            List<Restaurant> restaurants = [sushiya, pizzeria, cafe];
+
+            int randomRestaurantId = random.Next(1, 4);
+            return restaurants.Find( r => r.Id == randomRestaurantId);
+        }
+
+        public static Dish GetRandomDish(Restaurant randomRestaurant)
         {
-            Console.WriteLine($"Enter your {input}: ");
-            info = Console.ReadLine();
+            return randomRestaurant.Dishes[random.Next(0, 3)];
+        }
 
-            if(info == string.Empty){
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Can't be empty here!");
-                Console.ResetColor();
-                continue;
-            }
-        } while (info == string.Empty);
-
-        return info;
-    }
-
-    public static int ReadRestaurantId(List<Restaurant> restaurants){
-        string restaurantId;
-        do
+        public static Order GetRandomOrder()
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("Select a restaurant(1, 2, 3):");
-            Console.ResetColor();
-            foreach (var restaurant in restaurants)
+            DeliveryManager manager = new();
+
+            Restaurant randomRestaurant = GetRandomRestaurant();
+
+            Client randomClient = new("Artem", "+380663421243", "3342 Mozar Ave");
+
+            Courier[] couriers = GetMockCouriersData();
+            Courier bestCourier = manager.GetBestCourier(couriers);
+
+            List<Dish> randomDishes = [];
+            for (int i = 0; i < 3; i++)
             {
-            restaurant.GetInfo();
+                randomDishes.Add(GetRandomDish(randomRestaurant));
             }
-            restaurantId = Console.ReadLine();
 
-            if(restaurantId != "1" && restaurantId != "2" && restaurantId != "3"){
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error, try again!");
-                Console.ResetColor();
-                continue;
-            }
-        } while (restaurantId != "1" && restaurantId != "2" && restaurantId != "3");
-
-        return int.Parse(restaurantId);
+            return new Order(randomRestaurant, randomClient, bestCourier, randomDishes, OrderStatus.Waiting, 10);
+        }
     }
-
-    public static int ReadDishId(Restaurant restaurant){
-        string dishId;
-        do
-        {
-            restaurant?.PrintMenu();
-            
-            dishId = Console.ReadLine();
-
-            if(dishId != "1" && dishId != "2" && dishId != "3" && dishId != "0"){
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("Error, try again!");
-                Console.ResetColor();
-                continue;
-            }
-        } while (dishId != "1" && dishId != "2" && dishId != "3" && dishId != "0");
-
-        return int.Parse(dishId);
-    }
-
     static void Main(string[] args)
     { 
         // Restaurants with Dishes
@@ -329,76 +309,27 @@ class Program
 
         List<Restaurant> restaurants = [sushiya, pizzeria, cafe];
 
-
-        // New Client
-
-        string name = "name";
-        string number = "number";
-        string address = "address";
-
-
-        name = ReadInfo(name);
-        number = ReadInfo(number);
-        address = ReadInfo(address);
-
-        
-        Client client = new Client(name, number, address);
-
-
-        // Restaurant Selection
-
-        int restaurantId = ReadRestaurantId(restaurants);
-
-        Restaurant restaurant = restaurants.Find(r => r.Id == restaurantId);
-
-
-        int dishId = 1;
-        
-        List<Dish> selectedDishes = [];
-
-        while (dishId != 0)
-        {
-
-
-        // Dish Selection
-
-        List<Dish> dishes = restaurant.Dishes;
-
-        dishId = ReadDishId(restaurant);
-
-        if(dishId == 0){
-            break;
-        }
-
-        Dish dish = dishes.Find(d => d.Id == dishId);
-
-
-        // Selected Dishes
-        
-        selectedDishes.Add(dish);
-
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine($"{dish.Name} was added to order");
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine("Select a restaurant(1, 2, 3):");
         Console.ResetColor();
+        foreach (var restaurant in restaurants)
+        {
+            restaurant.GetInfo();
         }
 
 
         // Delivery Manager
 
         DeliveryManager delivery = new();
-        
-        
-        // Courier Search
-
-        Courier[] couriers = MockTester.GetMockCouriersData();
-        Courier courier= delivery.GetBestCourier(couriers);
 
 
         // Order
 
-        Order order = new(restaurant, client, courier, selectedDishes, OrderStatus.Waiting, 10);
+        Order order = MockTester.GetRandomOrder();
 
-        string confirm = order.GetInfo(restaurant, client, courier, selectedDishes, order);
+        order.Restaurant.PrintMenu();
+
+        string confirm = order.GetInfo(order.Restaurant, order.Client, order.Courier, order.Dishes, order);
 
         if(confirm == "0"){
             Console.ForegroundColor = ConsoleColor.Red;
@@ -414,7 +345,7 @@ class Program
 
         // Delivery Progress
 
-        int deliveryTime = delivery.CalculateDeliveryTime(client.Address);
+        int deliveryTime = delivery.CalculateDeliveryTime(order.Client.Address);
 
         delivery.DeliveryProgress(deliveryTime, order);
     }
